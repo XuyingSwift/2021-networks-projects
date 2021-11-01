@@ -1,8 +1,3 @@
-'''
-Created on Oct 12, 2016
-
-@author: mwitt_000
-'''
 import queue
 import threading
 
@@ -27,6 +22,7 @@ class Interface:
     def put(self, pkt, block=False):
         self.queue.put(pkt, block)
 
+
 ## Implements a network layer packet (different from the RDT packet
 # from programming assignment 2).
 # NOTE: This class will need to be extended to for the packet to include
@@ -34,23 +30,25 @@ class Interface:
 class NetworkPacket:
     ## packet encoding lengths
 
+    # PACKET HEADER
+    # dst_addr:flag:packetid:msg
 
-    #PACKET HEADER
-    #dst_addr:frag_flag:packetid:msg
+    ## packet encoding lengths
+    # --- new fields for segmentation "to allow the destination host to perform reassebmbly tasks" (pg 333 in book)
     dst_addr_S_length = 5
-    frag_flag_S_length = 1
-    ident_S_length = 5
-
+    flag_S = 1
+    offset_S_length = 2
 
     ##@param dst_addr: address of the destination host
     # @param data_S: packet payload
-    # @param frag_flag: if the packet is part of a segmentation
+    # @param flag: if the packet is part of a segmentation
     # @param offset: where the offset is
-    def __init__(self, dst_addr, frag_flag, ident, data_S):
+    def __init__(self, dst_addr, flag, offset, data_S):
         self.dst_addr = dst_addr
         self.data_S = data_S
-        self.frag_flag = frag_flag
-        self.ident = ident
+        self.frag_flag = flag
+        self.ident = offset
+
     ## called when printing the object
     def __str__(self):
         return self.to_byte_S()
@@ -58,8 +56,8 @@ class NetworkPacket:
     ## convert packet to a byte string for transmission over links
     def to_byte_S(self):
         byte_S = str(self.dst_addr).zfill(self.dst_addr_S_length)
-        byte_S += str(self.frag_flag).zfill(self.frag_flag_S_length)
-        byte_S += str(self.ident).zfill(self.ident_S_length)
+        byte_S += str(self.frag_flag).zfill(self.flag_S)
+        byte_S += str(self.ident).zfill(self.offset_S_length)
         byte_S += self.data_S
         return byte_S
 
@@ -67,26 +65,32 @@ class NetworkPacket:
     # @param byte_S: byte string representation of the packet
     @classmethod
     def from_byte_S(self, byte_S):
-        dst_addr = int(byte_S[0 : NetworkPacket.dst_addr_S_length])
-        frag_flag = int(byte_S[NetworkPacket.dst_addr_S_length : NetworkPacket.dst_addr_S_length + NetworkPacket.frag_flag_S_length])
-        ident = int(byte_S[NetworkPacket.dst_addr_S_length + NetworkPacket.frag_flag_S_length : NetworkPacket.dst_addr_S_length + NetworkPacket.frag_flag_S_length + NetworkPacket.ident_S_length ])
-        data_S = byte_S[NetworkPacket.dst_addr_S_length + NetworkPacket.frag_flag_S_length + NetworkPacket.ident_S_length:]
+        dst_addr = int(byte_S[0: NetworkPacket.dst_addr_S_length])
+        frag_flag = int(
+            byte_S[NetworkPacket.dst_addr_S_length: NetworkPacket.dst_addr_S_length + NetworkPacket.flag_S])
+        ident = int(byte_S[
+                    NetworkPacket.dst_addr_S_length + NetworkPacket.flag_S: NetworkPacket.dst_addr_S_length + NetworkPacket.flag_S + NetworkPacket.offset_S_length])
+        data_S = byte_S[
+                 NetworkPacket.dst_addr_S_length + NetworkPacket.flag_S + NetworkPacket.offset_S_length:]
         return self(dst_addr, frag_flag, ident, data_S)
 
-
     def segment(self, mtu):
-        segments = [self.data_S[i:i+mtu] for i in range(0,len(self.data_S), mtu)] #break packet into segments of mtu length
+        # break packet into segments of mtu length
+        segments = [self.data_S[i:i + mtu] for i in
+                    range(0, len(self.data_S), mtu)]
         return segments
+
 
 ## Implements a network host for receiving and transmitting data
 class Host:
     segment_list = []
+
     ##@param addr: address of this node represented as an integer
     def __init__(self, addr):
         self.addr = addr
         self.in_intf_L = [Interface()]
         self.out_intf_L = [Interface()]
-        self.stop = False #for thread termination
+        self.stop = False  # for thread termination
 
     ## called when printing the object
     def __str__(self):
@@ -96,63 +100,52 @@ class Host:
     # @param dst_addr: destination address for the packet
     # @param data_S: data being transmitted to the network layer
     def multiPackets(self, data_S, mtu):
-        packets = [data_S[i:i+mtu] for i in range(0,len(data_S), mtu)]
+        packets = [data_S[i:i + mtu] for i in range(0, len(data_S), mtu)]
         return packets
 
-
     def udt_send(self, dst_addr, data_S, p_id=None):
-        # if string si longer than mtu, set it in more than 2 pakeges
         if len(data_S) > self.out_intf_L[0].mtu:
-            string_mtu =  self.out_intf_L[0].mtu - 11
+            string_mtu = self.out_intf_L[0].mtu - 7
             packets = self.multiPackets(data_S, string_mtu)
-            p_id = 10000  #packet id
             for packet in packets:
                 p = NetworkPacket(dst_addr, 0, p_id, packet)
                 self.out_intf_L[0].put(p.to_byte_S())
-                print('\n%s: sending packet "%s" out interface with mtu=%d\n' % (self, p, self.out_intf_L[0].mtu))
-                p_id+= 10000
+                print('%s: sending packet "%s" out interface with mtu=%d' % (self, p, self.out_intf_L[0].mtu))
         else:
             p = NetworkPacket(dst_addr, 0, p_id, data_S)
-            self.out_intf_L[0].put(p.to_byte_S()) #send packets always enqueued successfully
-            print('\n%s: sending packet "%s" out interface with mtu=%d\n' % (self, p, self.out_intf_L[0].mtu))
+            self.out_intf_L[0].put(p.to_byte_S())  # send packets always enqueued successfully
+            print('%s: sending packet "%s" out interface with mtu=%d' % (self, p, self.out_intf_L[0].mtu))
 
-    def isSeg(self, segments, pkt_id):
+    def format(self, segments, pkt_id):
         og_pkt = ''
         for segment in segments:
-            # for all segments that share the same id
-            if segment[6] == pkt_id:
-                # add all segments into return string
-                og_pkt += segment[11:]
+            if segment[6] == pkt_id:  # for all segments that share the same id
+                og_pkt += segment[11:]  # add all segments into return string
         return og_pkt
 
     ## receive packet from the network layer
     def udt_receive(self):
         pkt_S = self.in_intf_L[0].get()
         if pkt_S is not None:
-            print('\n%s: received packet "%s"\n' % (self, pkt_S))
-            # if a packet is actually a segment
-            if pkt_S[5] == '1':
-                # add to list of all segmented packets
-                self.segment_list.append(pkt_S)
-                # if the total segments equals the latest packet part of the id
-                if pkt_S[7] == pkt_S[9] and pkt_S[8] == pkt_S[10]:
-                    og_data = self.isSeg(self.segment_list, pkt_S[6])
-                    p = NetworkPacket(pkt_S[:5], 0, pkt_S[6] + '0000', og_data)
-                    print('\nrestored Packets: ' + p.to_byte_S() + '\n')
-
-
+            print('%s: received packet "%s"' % (self, pkt_S))
+            if pkt_S[5] == '1':  # if a packet is actually a segment
+                self.segment_list.append(pkt_S)  # add to list of all segmented packets
+                if pkt_S[7] == pkt_S[9] and pkt_S[8] == pkt_S[
+                    10]:  # if the total segments equals the latest packet part of the id
+                    og_data = self.format(self.segment_list, pkt_S[6])  # reconstruct original string
+                    p = NetworkPacket(pkt_S[:5], 0, pkt_S[6] + ' ', og_data)  # reconstruct original packet
+                    print('formated PACKET: ' + p.to_byte_S())
 
     ## thread target for the host to keep receiving data
     def run(self):
-        print (threading.currentThread().getName() + ': Starting')
+        print(threading.currentThread().getName() + ': Starting')
         while True:
-            #receive data arriving to the in interface
+            # receive data arriving to the in interface
             self.udt_receive()
-            #terminate
-            if(self.stop):
-                print (threading.currentThread().getName() + ': Ending')
+            # terminate
+            if (self.stop):
+                print(threading.currentThread().getName() + ': Ending')
                 return
-
 
 
 ## Implements a multi-interface router described in class
@@ -162,9 +155,9 @@ class Router:
     # @param intf_count: the number of input and output interfaces
     # @param max_queue_size: max queue length (passed to Interface)
     def __init__(self, name, intf_count, max_queue_size):
-        self.stop = False #for thread termination
+        self.stop = False  # for thread termination
         self.name = name
-        #create a list of interfaces
+        # create a list of interfaces
         self.in_intf_L = [Interface(max_queue_size) for _ in range(intf_count)]
         self.out_intf_L = [Interface(max_queue_size) for _ in range(intf_count)]
 
@@ -178,36 +171,36 @@ class Router:
         for i in range(len(self.in_intf_L)):
             pkt_S = None
             try:
-                #get packet from interface i
+                # get packet from interface i
                 pkt_S = self.in_intf_L[i].get()
-                #if packet exists make a forwarding decision
+                # if packet exists make a forwarding decision
                 if pkt_S is not None:
-                    p = NetworkPacket.from_byte_S(pkt_S) #parse a packet out
+                    p = NetworkPacket.from_byte_S(pkt_S)  # parse a packet out
                     if len(pkt_S) > self.out_intf_L[i].mtu:
-                        string_mtu =  self.out_intf_L[i].mtu - 11
-                        segments = p.segment(string_mtu)
-                        seg_total = len(segments) * 100
+                        string_mtu = self.out_intf_L[i].mtu - 7  # 11 is the bit addr length
+                        segments = p.segment(string_mtu)  # segment packet into segments
+                        seg_total = len(segments) * 100  # total amount of segments
                         seg_count = 1
                         for seg in segments:
-                            seg_p = NetworkPacket(p.dst_addr, 1, p.ident + seg_total + seg_count, seg)
-                            self.out_intf_L[i].put(seg_p.to_byte_S(), True)
-                            print('\n%s: forwarding segmented packet "%s" from interface %d to %d with mtu %d\n' \
-                                % (self, seg_p, i, i, self.out_intf_L[i].mtu))
+                            seg_p = NetworkPacket(p.dst_addr, 1, p.ident + seg_total + seg_count, seg)  # segment packet
+                            self.out_intf_L[i].put(seg_p.to_byte_S(), True)  # send seg_p
+                            print('%s: forwarding segmented packet "%s" from interface %d to %d with mtu %d'
+                                  % (self, seg_p, i, i, self.out_intf_L[i].mtu))
                             seg_count += 1
 
                     else:
                         self.out_intf_L[i].put(p.to_byte_S(), True)
-                        print('\n%s: forwarding packet "%s" from interface %d to %d with mtu %d\n' \
-                            % (self, p, i, i, self.out_intf_L[i].mtu))
+                        print('%s: forwarding packet "%s" from interface %d to %d with mtu %d'
+                              % (self, p, i, i, self.out_intf_L[i].mtu))
             except queue.Full:
-                print('\n%s: packet "%s" lost on interface %d\n' % (self, p, i))
+                print('%s: packet "%s" lost on interface %d' % (self, p, i))
                 pass
 
     ## thread target for the host to keep forwarding data
     def run(self):
-        print (threading.currentThread().getName() + ': Starting')
+        print(threading.currentThread().getName() + ': Starting')
         while True:
             self.forward()
             if self.stop:
-                print (threading.currentThread().getName() + ': Ending')
+                print(threading.currentThread().getName() + ': Ending')
                 return
