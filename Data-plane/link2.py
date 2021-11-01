@@ -2,13 +2,12 @@
 
 import queue
 import threading
-from rprint import print
 
 
-# An abstraction of a link between router interfaces
+## An abstraction of a link between router interfaces
 class Link:
 
-    # creates a link between two objects by looking up and linking node interfaces.
+    ## creates a link between two objects by looking up and linking node interfaces.
     # @param from_node: node from which data will be transfered
     # @param from_intf_num: number of the interface on that node
     # @param to_node: node to which data will be transfered
@@ -21,24 +20,21 @@ class Link:
         self.to_intf_num = to_intf_num
         self.in_intf = from_node.out_intf_L[from_intf_num]
         self.out_intf = to_node.in_intf_L[to_intf_num]
-        # configure the MTUs of linked interfaces
+        # configure the linking interface MTUs
         self.in_intf.mtu = mtu
         self.out_intf.mtu = mtu
 
-    # called when printing the object
+    ## called when printing the object
     def __str__(self):
         return 'Link %s-%d to %s-%d' % (self.from_node, self.from_intf_num, self.to_node, self.to_intf_num)
 
-    # transmit a packet from the 'from' to the 'to' interface
+    ##transmit a packet from the 'from' to the 'to' interface
     def tx_pkt(self):
         pkt_S = self.in_intf.get()
         if pkt_S is None:
             return  # return if no packet to transfer
-        if len(pkt_S) > self.in_intf.mtu:
-            print('%s: packet "%s" length greater than the from interface MTU (%d)' % (self, pkt_S, self.out_intf.mtu))
-            return  # return without transmitting if packet too big
         if len(pkt_S) > self.out_intf.mtu:
-            print('%s: packet "%s" length greater than the to interface MTU (%d)' % (self, pkt_S, self.out_intf.mtu))
+            print('%s: packet "%s" length greater then link mtu (%d)' % (self, pkt_S, self.out_intf.mtu))
             return  # return without transmitting if packet too big
         # otherwise transmit the packet
         try:
@@ -49,28 +45,24 @@ class Link:
             pass
 
 
-# An abstraction of the link layer
+## An abstraction of the link layer
 class LinkLayer:
 
     def __init__(self):
-        # list of links in the network
+        ## list of links in the network
         self.link_L = []
         self.stop = False  # for thread termination
 
-    # Return a name of the network layer
-    def __str__(self):
-        return "Network"
-
-    # add a Link to the network
+    ##add a Link to the network
     def add_link(self, link):
         self.link_L.append(link)
 
-    # transfer a packet across all links
+    ##transfer a packet across all links
     def transfer(self):
         for link in self.link_L:
             link.tx_pkt()
 
-    # thread target for the network to keep transmitting data across links
+    ## thread target for the network to keep transmitting data across links
     def run(self):
         print(threading.currentThread().getName() + ': Starting')
         while True:

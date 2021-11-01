@@ -1,31 +1,35 @@
 
-import network1
-import link1
+import link2
+import network2
 import threading
 from time import sleep
 
 ##configuration parameters
+
+
 router_queue_size = 0  # 0 means unlimited
 simulation_time = 1  # give the network sufficient time to transfer all packets before quitting
 
 if __name__ == '__main__':
     object_L = []  # keeps track of objects, so we can kill their threads
 
-    # create network nodes
-    client = network1.Host(1)
+    # create network nodes    These are changed to correspond with the files for part 2 of the assignment
+    client = network2.Host(1)
     object_L.append(client)
-    server = network1.Host(2)
+    server = network2.Host(2)
     object_L.append(server)
-    router_a = network1.Router(name='A', intf_count=1, max_queue_size=router_queue_size)
+    router_a = network2.Router(name='A', intf_count=1, max_queue_size=router_queue_size)
     object_L.append(router_a)
 
     # create a Link Layer to keep track of links between network nodes
-    link_layer = link1.LinkLayer()
+
+    link_layer = link2.LinkLayer()
     object_L.append(link_layer)
 
     # add all the links
-    link_layer.add_link(link1.Link(client, 0, router_a, 0, 50))
-    link_layer.add_link(link1.Link(router_a, 0, server, 0, 50))
+    link_layer.add_link(link2.Link(client, 0, router_a, 0, 50))
+    # MTU change to 30 for part 2 of the assignment
+    link_layer.add_link(link2.Link(router_a, 0, server, 0, 30))
 
     # start all the objects
     thread_L = [threading.Thread(name=client.__str__(), target=client.run),
@@ -53,3 +57,5 @@ if __name__ == '__main__':
         t.join()
 
     print("All simulation threads joined")
+
+

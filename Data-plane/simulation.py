@@ -1,8 +1,3 @@
-"""
-Created on Oct 12, 2016
-
-@author: mwittie
-"""
 
 import network
 import link
