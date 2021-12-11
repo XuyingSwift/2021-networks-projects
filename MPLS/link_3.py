@@ -90,7 +90,7 @@ class Link:
                           ' - queue size %d' \
                           % (self, pkt_S, node_a, node_a_intf, node_b, node_b_intf, intf_a.next_avail_time - time.time(), intf_a.out_queue.qsize()))
                 if intf_a.out_queue.qsize() != 0:
-                    print("\n #-------- Queue for %s--------# \n" % self.node_1)
+                    print("\n ######### Queue for %s######## \n" % self.node_1)
                     for pkt in intf_a.out_queue.queue:
                         print("Packet with Priority: ",pkt[-1])
                     print('\n#-----------------#\n')

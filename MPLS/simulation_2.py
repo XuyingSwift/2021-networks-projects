@@ -19,7 +19,7 @@ if __name__ == '__main__':
     object_L.append(host_2)
     object_L.append(host_3)
 
-    #DL:{'Destination': {out intrf: out lbl}}
+    #:{'Destination': {out intrf: out lbl}}
     #create routers and routing tables for connected clients (subnets)
     encap_tbl_D = {'H1': 5, 'H2': 7}    # table used to encapsulate network packets into MPLS frames
     frwd_tbl_D = {5: {2: 6}, 7: {3: 8}}     # table used to forward MPLS frames
@@ -97,10 +97,15 @@ if __name__ == '__main__':
         t.start()
 
     #create some send events
-    for i in range(5):
-        priority = i%2
-        host_1.udt_send('H3', 'MESSAGE_%d_FROM_H1' % i, priority)
-        host_2.udt_send('H3', 'MESSAGE_%d_FROM_H2' % i, priority)
+    #for i in range(5):
+        #priority = i%2
+        #host_1.udt_send('H3', 'MESSAGE_%d_FROM_H1' % i, priority)
+        #host_2.udt_send('H3', 'MESSAGE_%d_FROM_H2' % i, priority)
+    priority = 1
+    i = 1
+    host_1.udt_send('H3', 'MESSAGE_%d_FROM_H1' % i, priority)
+    i =2
+    host_2.udt_send('H3', 'MESSAGE_%d_FROM_H2' % i, priority)
 
     #give the network sufficient time to transfer all packets before quitting
     sleep(simulation_time)

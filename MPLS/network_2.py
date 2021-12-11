@@ -206,7 +206,7 @@ class Router:
     #  @param p Packet to forward
     #  @param i Incoming interface number for packet p
     def process_network_packet(self, pkt, i):
-        #DL: Checks to see if NetworkPacket destination matches something in the encap_tbl_D then it will encapsulate it
+        #Checks to see if NetworkPacket destination matches something in the encap_tbl_D then it will encapsulate it
         pktSource = pkt.data_S[len(pkt.data_S)-2 : ]
         for source in self.encap_tbl_D:
             if source == pktSource:
@@ -221,7 +221,7 @@ class Router:
     #  @param i Incoming interface number for the frame
     def process_MPLS_frame(self, m_fr, i):
         inface = 1
-        if self.decap_tbl_D:#DL: MPLS decapsulation if there exists the destination host for the mpls package
+        if self.decap_tbl_D:# MPLS decapsulation if there exists the destination host for the mpls package
             if self.decap_tbl_D[m_fr.dest]:
                 packet = m_fr.packet
                 inface = self.decap_tbl_D[m_fr.dest]
@@ -234,7 +234,7 @@ class Router:
 
         print('%s: processing MPLS frame "%s"' % (self, m_fr))
         # for now forward the frame out interface 1
-        try:#DL: If packet exists then we need to forward that network packet to the host
+        try:#If packet exists then we need to forward that network packet to the host
             if packet:
                 try:
                     fr = LinkFrame('Network', packet.to_byte_S())
@@ -244,7 +244,7 @@ class Router:
                     print('%s: frame "%s" lost on interface %d' % (self, p, i))
                     pass
 
-        except:#DL: If that packet does not exist then we look to forward it along to the next router in the line
+        except:#If that packet does not exist then we look to forward it along to the next router in the line
             try:
                 fr = LinkFrame('MPLS', m_fr.to_byte_S())
                 self.intf_L[inface].put(fr.to_byte_S(), 'out', True)

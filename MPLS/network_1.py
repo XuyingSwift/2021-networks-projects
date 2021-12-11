@@ -191,10 +191,13 @@ class Router:
             pkt_S = fr.data_S
             #process the packet as network, or MPLS
             if fr.type_S == "Network":
+                # parse a packet out
                 p = NetworkPacket.from_byte_S(pkt_S) #parse a packet out
                 self.process_network_packet(p, i)
             elif fr.type_S == "MPLS":
+                # parse a packet out
                 m_fr = MPLSFrame.from_byte_S(pkt_S)
+                # send it for processing
                 self.process_MPLS_frame(m_fr, i)
             else:
                 raise('%s: unknown frame type: %s' % (self, m_fr.type))
@@ -210,7 +213,7 @@ class Router:
             #send the encapsulated packet for processing as MPLS frame
             self.process_MPLS_frame(m_fr, i)
         else:
-            print("Did not Encapsulate the packet")
+            print("key not fond so did not Encapsulate the packet")
 
     ## process an MPLS frame incoming to this router
     #  @param m_fr: MPLS frame to process
@@ -224,11 +227,11 @@ class Router:
         try:
             #decapsulate
             if m_fr.label == self.frwd_tbl_D[inlabel][1]:
-                print("\nLAST HOP, DECAPSULATING\n")
+                print("\ngoing to decapsulate\n")
                 fr = LinkFrame("Network", m_fr.packet)
             else:
             #forward
-                print("\nNOT LAST HOP, FORWARDING\n")
+                print("\ngoing to forwarding\n")
                 fr = LinkFrame("MPLS", m_fr.to_byte_S())
             self.intf_L[outInterface].put(fr.to_byte_S(), 'out', True)
             print('%s: forwarding frame "%s" from interface %d to %d' % (self, fr, i, outInterface))
